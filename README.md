@@ -81,10 +81,7 @@ L-curve example currently enables GPU; use `--no-use-gpu` to run it on CPU.
 
 ## Citation
 
-When using this software, cite MesoChi, its version (0.1.0), the repository
-URL, and the date you accessed it. Bibliographic details for the associated
-paper are not yet provided here; add them once the publication details are
-available.
+When using MesoChi, please cite the publication "{Citation}".
 
 ## License
 
