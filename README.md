@@ -37,7 +37,7 @@ python -m pip install "cupy-cuda13x==14.2.0"
 See the [CuPy installation guide](https://docs.cupy.dev/en/stable/install.html)
 for other CUDA versions. The public script automatically selects an available
 GPU or reports CPU selection. Use `--use-gpu` or `--no-use-gpu` to override it.
-FBI preparation runs on CPU; the reconstruction operators and solvers run on
+FBI preparation runs on CPU. The reconstruction operators and solvers run on
 the selected device.
 
 ## Reconstruct your data
@@ -55,8 +55,8 @@ of `Micro_QSM_Recon.py`, then run the file in VS Code. Use `--help` to see all
 settings. The script generates QSM L2, μQSM L2, QSM TV, and μQSM TV maps,
 comparison figures, and a run record. The maps are cropped to the input grid,
 CSF-referenced, and saved in NumPy and MATLAB archives. A weight map is
-optional; omitting it uses uniform weights. NIfTI inputs provide the export
-reference automatically; MATLAB inputs need a matching reference image for
+optional and omitting it uses uniform weights. NIfTI inputs provide the export
+reference automatically. MATLAB inputs need a matching reference image for
 NIfTI export. `--no-display` saves figures without opening windows.
 
 ## Reproduce the experiments
@@ -72,38 +72,18 @@ Edit the settings at the top of each script and replace the example paths with
 your own. Phantom reconstruction uses the five bundled archives in
 `data/phantoms/`. The default `1024³` generation needs substantial memory and
 runtime. The ex vivo examples require six prepared MATLAB files. The ex vivo
-dataset is not included in the repository, and a public download is not
-currently provided; supply prepared data in the format described in the
+dataset is not included in the repository, and a public download is available here:{links}. Please supply prepared data in the format described in the
 tutorial. The L-curve example estimates only the QSM and μQSM
 **L2** parameters, which must be reviewed and transferred manually into the
 reconstruction settings. TV reconstruction remains available.
 
 The examples resolve default locations from their own files, so they can run
 from another working directory after installing the package. The ex vivo
-L-curve example currently enables GPU; use `--no-use-gpu` to run it on CPU.
-
-## Verify the installation
-
-After installing and activating the environment, run the CPU numerical tests
-from the project directory:
-
-```powershell
-python -m unittest discover -s tests -v
-python tests/smoke_reconstruction.py
-```
-
-The numerical tests use a small reference fixture and check the operators,
-simulation helpers, and L-curve routines. The smoke check reconstructs QSM on
-the bundled 32³ cylindrical phantom on CPU. It expects a finite 32³ result and
-a relative field residual below 1, and saves no output. Neither check replaces
-validation against experimental data or reproduces the full experiment.
+L-curve example currently enables GPU, use `--no-use-gpu` to run it on CPU.
 
 ## Citation
 
-When using this software, cite MesoChi, its version (0.1.0), the repository
-URL, and the date you accessed it. Bibliographic details for the associated
-paper are not yet provided here; add them once the publication details are
-available.
+Please cite this publication {citation} if you are using this toolbox.
 
 ## License
 
