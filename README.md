@@ -1,25 +1,31 @@
 # MesoChi
 
-MesoChi (Microstructure Informed Quantitative Susceptibility Mapping) provides
-QSM and μQSM reconstruction with L2 and TV regularization. It includes the
-phantom and ex vivo experiments used in this project.
+MesoChi (Microstructure Informed Quantitative Susceptibility Mapping) combines
+prepared local phase data with diffusion MRI. It uses fiber-ball imaging (FBI)
+to estimate scatter matrices that inform the mesoscopic contribution to the
+μQSM forward model. The toolbox reconstructs conventional QSM and μQSM maps
+with L2 and TV regularization, and includes this project's phantom and ex vivo
+experiments.
 
 ## Install
 
-Use Python 3.11 and install from the project folder:
+Install Miniconda, Miniforge, or another Conda distribution. Open a terminal
+in the project folder containing `environment.yml` and run:
 
 ```powershell
-python -m venv .venv
-.\.venv\Scripts\Activate.ps1
-python -m pip install -e ".[nifti]"
+conda env create -f environment.yml
+conda activate mesochi
+python -c "import mesochi, nibabel; print(mesochi.__file__)"
 ```
 
-The `nifti` extra installs NiBabel for NIfTI input and export. Install `-e .`
-instead when using MATLAB inputs and NumPy/MATLAB outputs only. Select this
-`.venv` interpreter in VS Code before running scripts.
+The environment uses Python 3.11, includes NiBabel for NIfTI input and output,
+and installs this checkout in editable mode. Select the `mesochi` interpreter in
+VS Code before running scripts. If you move the checkout, reactivate the
+environment and run `python -m pip install -e ".[nifti]"` from its new location.
 
-For NVIDIA GPU reconstruction, install the CuPy package matching your CUDA
-version in the same environment. For this workstation's CUDA 13 installation:
+GPU support is optional. For an NVIDIA GPU, install the CuPy package matching
+your CUDA version in the activated `mesochi` environment. For example, with a
+compatible NVIDIA driver and CUDA 13 toolkit:
 
 ```powershell
 python -m pip install "cupy-cuda13x==14.2.0"
@@ -37,16 +43,18 @@ Prepare the inputs described in [the input/output guide](docs/exvivo_inputs.md),
 then run from the project folder:
 
 ```powershell
-python Micro_QSM_Recon.py --input-dir C:\path\to\inputs --output-dir C:\path\to\outputs --input-format mat
-python Micro_QSM_Recon.py --input-dir C:\path\to\inputs --output-dir C:\path\to\outputs --input-format nifti
+python Micro_QSM_Recon.py --input-dir "C:\path\to\inputs" --output-dir "C:\path\to\outputs" --input-format mat --no-display
+python Micro_QSM_Recon.py --input-dir "C:\path\to\inputs" --output-dir "C:\path\to\outputs" --input-format nifti --no-display
 ```
 
 Alternatively, edit `INPUT_DIR`, `OUTPUT_DIR`, and `INPUT_FORMAT` near the top
 of `Micro_QSM_Recon.py`, then run the file in VS Code. Use `--help` to see all
 settings. The script generates QSM L2, μQSM L2, QSM TV, and μQSM TV maps,
-comparison figures, and a run record. A weight map is optional; omitting it
-uses uniform weights. NIfTI inputs provide the export reference automatically;
-MATLAB inputs need a matching reference image for NIfTI export.
+comparison figures, and a run record. The maps are cropped to the input grid,
+CSF-referenced, and saved in NumPy and MATLAB archives. A weight map is
+optional; omitting it uses uniform weights. NIfTI inputs provide the export
+reference automatically; MATLAB inputs need a matching reference image for
+NIfTI export. `--no-display` saves figures without opening windows.
 
 ## Reproduce the experiments
 
@@ -54,7 +62,7 @@ MATLAB inputs need a matching reference image for NIfTI export.
 python examples/generate_phantoms.py
 python examples/reconstruct.py
 python examples/exvivo_reconstruction.py --no-display
-python examples/exvivo_lcurve.py --no-display
+python examples/exvivo_lcurve.py --no-display --no-use-gpu
 ```
 
 Edit the settings at the top of each script. Phantom reconstruction uses the
@@ -79,8 +87,9 @@ L-curve example currently enables GPU; use `--no-use-gpu` to run it on CPU.
 - `Sanity_Check/`: local diagnostics, tests, and fixtures; excluded from Git and distributions.
 - `results/`: generated outputs, ignored by Git.
 
-Original hash manifests and validation reports in `docs/` are historical;
-their old `data/example/` paths refer to the unchanged files now under
-`data/phantoms/`. See [simulation notes](docs/simulation_notes.md) for the
-phantom model and the [input/output guide](docs/exvivo_inputs.md) for the
-reconstruction conventions and limitations.
+The provenance files in `docs/` record original source and dataset hashes;
+their old paths describe the historical layout. Historical validation reports
+are kept locally in the unpublished `Sanity_Check/` folder. See [simulation
+notes](docs/simulation_notes.md) for the phantom model and the [input/output
+guide](docs/exvivo_inputs.md) for a detailed tutorial and reconstruction
+conventions.
