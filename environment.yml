@@ -1,0 +1,16 @@
+name: mesochi
+channels:
+  - conda-forge
+dependencies:
+  - python=3.11
+  - numpy=2.3.5
+  - scipy=1.16.3
+  - matplotlib-base=3.10.7
+  - numba=0.68.0
+  - nibabel=5.4.2
+  - pip
+  - setuptools>=68
+  - wheel
+  - pip:
+      - sigpy==0.1.27
+      - "-e .[nifti]"

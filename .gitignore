@@ -1,0 +1,15 @@
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.cache/
+Sanity_Check/
+build/
+dist/
+*.egg-info/
+data/generated/*
+!data/generated/.gitkeep
+data/exvivo/*
+!data/exvivo/README.md
+results/*
+!results/.gitkeep

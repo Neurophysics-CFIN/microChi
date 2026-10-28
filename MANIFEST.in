@@ -1,0 +1,7 @@
+include Micro_QSM_Recon.py
+include environment.yml
+recursive-include examples *.py
+recursive-include tests *.py *.npz
+recursive-include data/phantoms *.npz
+include docs/reconstruction_tutorial.md docs/simulation_notes.md
+prune Sanity_Check
