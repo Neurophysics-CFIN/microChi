@@ -1,7 +1,7 @@
 # MesoChi
 
 MesoChi is an open-source Python toolbox for microstructure-informed quantitative susceptibility mapping (μQSM). 
-It combines prepared local phase data with diffusion MRI. It uses fiber-ball imaging (FBI)
+It combines prepared local phase data with diffusion MRI. It applys fiber-ball imaging (FBI)
 to estimate scatter matrices that inform the mesoscopic contribution to the
 μQSM forward model. The toolbox reconstructs conventional QSM and μQSM maps
 using L2 and total variation (TV) regularization. It also includes scripts for
