@@ -18,6 +18,9 @@ conda activate mesochi
 python -c "import mesochi, nibabel; print(mesochi.__file__)"
 ```
 
+The last command checks that MesoChi and NiBabel can be imported and prints the
+location of the MesoChi package. It does not run a reconstruction.
+
 The environment uses Python 3.11, includes NiBabel for NIfTI input and output,
 and installs this checkout in editable mode. Select the `mesochi` interpreter in
 VS Code before running scripts. If you move the checkout, reactivate the
@@ -39,7 +42,7 @@ the selected device.
 
 ## Reconstruct your data
 
-Prepare the inputs described in [the input/output guide](docs/exvivo_inputs.md),
+Prepare the inputs described in [the reconstruction tutorial](docs/reconstruction_tutorial.md),
 then run from the project folder:
 
 ```powershell
@@ -60,36 +63,60 @@ NIfTI export. `--no-display` saves figures without opening windows.
 
 ```powershell
 python examples/generate_phantoms.py
-python examples/reconstruct.py
-python examples/exvivo_reconstruction.py --no-display
-python examples/exvivo_lcurve.py --no-display --no-use-gpu
+python examples/phantom_reconstruction.py
+python examples/exvivo_reconstruction.py --input-dir "C:\path\to\exvivo_inputs" --output-dir "C:\path\to\outputs" --no-display
+python examples/exvivo_lcurve.py --input-dir "C:\path\to\exvivo_inputs" --output-dir "C:\path\to\outputs" --no-display --no-use-gpu
 ```
 
-Edit the settings at the top of each script. Phantom reconstruction uses the
-five bundled archives in `data/phantoms/`; generation writes to
-`data/generated/`. The default `1024³` generation needs substantial memory and
-runtime. The ex vivo example expects the six prepared MATLAB files in local
-`data/exvivo/`; those files are not published. The L-curve example estimates
-only the QSM and μQSM **L2** parameters, which must be reviewed and transferred
-manually into the reconstruction settings. TV reconstruction remains available.
+Edit the settings at the top of each script and replace the example paths with
+your own. Phantom reconstruction uses the five bundled archives in
+`data/phantoms/`. The default `1024³` generation needs substantial memory and
+runtime. The ex vivo examples require six prepared MATLAB files. The ex vivo
+dataset is not included in the repository, and a public download is not
+currently provided; supply prepared data in the format described in the
+tutorial. The L-curve example estimates only the QSM and μQSM
+**L2** parameters, which must be reviewed and transferred manually into the
+reconstruction settings. TV reconstruction remains available.
 
 The examples resolve default locations from their own files, so they can run
 from another working directory after installing the package. The ex vivo
 L-curve example currently enables GPU; use `--no-use-gpu` to run it on CPU.
+
+## Verify the installation
+
+After installing and activating the environment, run the CPU numerical tests
+from the project directory:
+
+```powershell
+python -m unittest discover -s tests -v
+python tests/smoke_reconstruction.py
+```
+
+The numerical tests use a small reference fixture and check the operators,
+simulation helpers, and L-curve routines. The smoke check reconstructs QSM on
+the bundled 32³ cylindrical phantom on CPU. It expects a finite 32³ result and
+a relative field residual below 1, and saves no output. Neither check replaces
+validation against experimental data or reproduces the full experiment.
+
+## Citation
+
+When using this software, cite MesoChi, its version (0.1.0), the repository
+URL, and the date you accessed it. Bibliographic details for the associated
+paper are not yet provided here; add them once the publication details are
+available.
+
+## License
+
+MesoChi is distributed under the [MIT License](LICENSE). The ex vivo dataset
+is not included and is not covered by this software license.
 
 ## Organization
 
 - `Micro_QSM_Recon.py`: public dataset reconstruction script.
 - `examples/`: scripts for phantom and ex vivo experiments.
 - `src/mesochi/`: shared operators, FBI, reconstruction, plotting, and L-curve code.
-- `data/phantoms/`: supplied phantom archives, formerly `data/example/`.
-- `data/exvivo/`: locally supplied ex vivo MATLAB data, ignored by Git.
-- `Sanity_Check/`: local diagnostics, tests, and fixtures; excluded from Git and distributions.
-- `results/`: generated outputs, ignored by Git.
+- `data/phantoms/`: supplied phantom archives.
 
-The provenance files in `docs/` record original source and dataset hashes;
-their old paths describe the historical layout. Historical validation reports
-are kept locally in the unpublished `Sanity_Check/` folder. See [simulation
-notes](docs/simulation_notes.md) for the phantom model and the [input/output
-guide](docs/exvivo_inputs.md) for a detailed tutorial and reconstruction
-conventions.
+See [simulation notes](docs/simulation_notes.md) for the phantom model and the
+[reconstruction tutorial](docs/reconstruction_tutorial.md) for detailed input,
+output, and reconstruction instructions.
