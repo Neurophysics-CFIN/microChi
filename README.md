@@ -18,9 +18,6 @@ conda activate mesochi
 python -c "import mesochi, nibabel; print(mesochi.__file__)"
 ```
 
-The last command checks that MesoChi and NiBabel can be imported and prints the
-location of the MesoChi package. It does not run a reconstruction.
-
 The environment uses Python 3.11, includes NiBabel for NIfTI input and output,
 and installs this checkout in editable mode. Select the `mesochi` interpreter in
 VS Code before running scripts. If you move the checkout, reactivate the
