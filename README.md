@@ -79,22 +79,6 @@ The examples resolve default locations from their own files, so they can run
 from another working directory after installing the package. The ex vivo
 L-curve example currently enables GPU; use `--no-use-gpu` to run it on CPU.
 
-## Verify the installation
-
-After installing and activating the environment, run the CPU numerical tests
-from the project directory:
-
-```powershell
-python -m unittest discover -s tests -v
-python tests/smoke_reconstruction.py
-```
-
-The numerical tests use a small reference fixture and check the operators,
-simulation helpers, and L-curve routines. The smoke check reconstructs QSM on
-the bundled 32³ cylindrical phantom on CPU. It expects a finite 32³ result and
-a relative field residual below 1, and saves no output. Neither check replaces
-validation against experimental data or reproduces the full experiment.
-
 ## Citation
 
 When using this software, cite MesoChi, its version (0.1.0), the repository
