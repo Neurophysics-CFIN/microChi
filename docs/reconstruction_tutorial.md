@@ -66,10 +66,7 @@ CuPy variants into the same environment.
 ## 2. Prepare the input folder
 
 Choose either the MATLAB or NIfTI layout below. The toolbox reads one input
-folder per run. The ex vivo dataset is not distributed with the package.
-
-The ex vivo dataset is not included in the repository, and a public download
-is not currently provided. Supply prepared data using one of the layouts
+folder per run. Supply prepared data using one of the layouts
 below. Check the relevant permissions and privacy requirements before sharing
 any experimental dataset.
 
