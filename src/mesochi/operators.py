@@ -1,3 +1,8 @@
+"""QSM operators with float32/complex64 or float64/complex128 coefficients.
+
+The constructor dtype controls coefficient and kernel precision. Forward and
+adjoint results preserve the higher precision of the input and operator.
+"""
 #%% imports and shared CPU / GPU helpers
 # QSM and cylindrical, spherical, and composite muQSM linear operators.
 import numpy as np
@@ -49,6 +54,17 @@ def _to_numpy(x):
     if _get_array_module(x) is cp:
         return cp.asnumpy(x)
     return np.asarray(x)
+
+
+def _operator_dtypes(dtype):
+    """Resolve the supported real precision and its matching complex dtype."""
+    try:
+        real_dtype = np.dtype(dtype)
+    except (TypeError, ValueError) as error:
+        raise TypeError("dtype must be float32 or float64.") from error
+    if real_dtype not in (np.dtype(np.float32), np.dtype(np.float64)):
+        raise TypeError("dtype must be float32 or float64.")
+    return real_dtype, np.result_type(real_dtype, np.complex64)
 
 
 def Dipole_Kernel(N, voxel_size, B0_dir, xp=np, dtype=None):
@@ -108,6 +124,9 @@ class QSMLinop(sp.linop.Linop):
         y.shape = (K, Nx, Ny, Nz)
 
     K = number of B0 orientations.
+
+    dtype selects float32 or float64 coefficients and matching complex kernels.
+    Outputs preserve the higher precision of the input and operator.
     """
 
     def __init__(
@@ -124,10 +143,10 @@ class QSMLinop(sp.linop.Linop):
 
         self.vol_shape = tuple(int(v) for v in N)
         self.num_vox = int(np.prod(self.vol_shape))
-        self.dtype = dtype
+        self.dtype, self.complex_dtype = _operator_dtypes(dtype)
 
         # B0 directions
-        B0_dirs_np = _to_numpy(B0_dirs).astype(np.float32)
+        B0_dirs_np = _to_numpy(B0_dirs).astype(self.dtype)
         _validate_directions(B0_dirs_np)
 
         if B0_dirs_np.shape == (3,):
@@ -155,7 +174,7 @@ class QSMLinop(sp.linop.Linop):
         )
 
         # ROI mask
-        self.mask_roi = xp.asarray(mask_roi, dtype=xp.float32)
+        self.mask_roi = xp.asarray(mask_roi, dtype=self.dtype)
 
         if self.mask_roi.shape != self.vol_shape:
             raise ValueError(
@@ -166,14 +185,14 @@ class QSMLinop(sp.linop.Linop):
         if mask_ref is None:
             self.mask_ref = 1.0 - self.mask_roi
         else:
-            self.mask_ref = xp.asarray(mask_ref, dtype=xp.float32)
+            self.mask_ref = xp.asarray(mask_ref, dtype=self.dtype)
 
         if self.mask_ref.shape != self.vol_shape:
             raise ValueError(
                 f"mask_ref shape {self.mask_ref.shape} != vol_shape {self.vol_shape}."
             )
 
-        self.N_ref = xp.sum(self.mask_ref)
+        self.N_ref = xp.sum(self.mask_ref, dtype=self.dtype)
         n_ref_val = float(cp.asnumpy(self.N_ref) if xp is cp else self.N_ref)
 
         if n_ref_val == 0:
@@ -183,10 +202,10 @@ class QSMLinop(sp.linop.Linop):
         if weight is None:
             self.weight = xp.ones(
                 (self.num_orients, *self.vol_shape),
-                dtype=xp.float32,
+                dtype=self.dtype,
             )
         else:
-            self.weight = xp.asarray(weight, dtype=xp.float32)
+            self.weight = xp.asarray(weight, dtype=self.dtype)
 
             # Allow single 3D weight for one or multiple orientations
             if self.weight.shape == self.vol_shape:
@@ -204,8 +223,8 @@ class QSMLinop(sp.linop.Linop):
         # Dipole kernels
         self.dip_k_list = [
             xp.asarray(
-                Dipole_Kernel(self.vol_shape, voxel_size, B0_dir=b0),
-                dtype=xp.complex64,
+                Dipole_Kernel(self.vol_shape, voxel_size, B0_dir=b0, dtype=self.dtype),
+                dtype=self.complex_dtype,
             )
             for b0 in self.B0_dirs
         ]
@@ -248,7 +267,7 @@ class QSMLinop(sp.linop.Linop):
 
         out = xp.empty(
             (self.num_orients, *self.vol_shape),
-            dtype=xp.result_type(input.real.dtype, xp.float32),
+            dtype=xp.result_type(input.real.dtype, self.dtype),
         )
 
         for i in range(self.num_orients):
@@ -297,7 +316,7 @@ class QSMAdjointLinop(sp.linop.Linop):
 
         acc = xp.zeros(
             A.vol_shape,
-            dtype=xp.result_type(input.real.dtype, xp.float32),
+            dtype=xp.result_type(input.real.dtype, A.dtype),
         )
 
         for i in range(A.num_orients):
@@ -329,6 +348,11 @@ class QSMAdjointLinop(sp.linop.Linop):
 
 #%% cylindrical muQSM operator and adjoint
 class MuQSMLinop(sp.linop.Linop):
+    """Cylindrical μQSM with shared 3-D or per-orientation 4-D weights.
+
+    dtype selects float32 or float64 coefficients and matching complex kernels.
+    Outputs preserve the higher precision of the input and operator.
+    """
     def __init__(
         self,
         N,
@@ -344,10 +368,10 @@ class MuQSMLinop(sp.linop.Linop):
     
         self.vol_shape = tuple(N)
         self.num_vox   = int(np.prod(self.vol_shape))
-        self.dtype     = dtype
+        self.dtype, self.complex_dtype = _operator_dtypes(dtype)
 
         # ── B0 directions ────────────────────────────────────────────────────
-        B0_dirs_np = _to_numpy(B0_dirs).astype(np.float32)
+        B0_dirs_np = _to_numpy(B0_dirs).astype(self.dtype)
         _validate_directions(B0_dirs_np)
         if B0_dirs_np.shape == (3,):
             B0_dirs_np = B0_dirs_np[None, :]
@@ -368,7 +392,7 @@ class MuQSMLinop(sp.linop.Linop):
         super().__init__(oshape=oshape, ishape=ishape, repr_str="MuQSMLinop")
 
         # ── masks ─────────────────────────────────────────────────────────────
-        self.mask_roi = xp.asarray(mask_roi, dtype=xp.float32)
+        self.mask_roi = xp.asarray(mask_roi, dtype=self.dtype)
         if self.mask_roi.shape != self.vol_shape:
             raise ValueError(
                 f"mask_roi shape {self.mask_roi.shape} != vol_shape {self.vol_shape}."
@@ -377,20 +401,20 @@ class MuQSMLinop(sp.linop.Linop):
         self.mask_ref = (
             1.0 - self.mask_roi
             if mask_ref is None
-            else xp.asarray(mask_ref, dtype=xp.float32)
+            else xp.asarray(mask_ref, dtype=self.dtype)
         )
         if self.mask_ref.shape != self.vol_shape:
             raise ValueError(
                 f"mask_ref shape {self.mask_ref.shape} != vol_shape {self.vol_shape}."
             )
 
-        self.N_ref = xp.sum(self.mask_ref)
+        self.N_ref = xp.sum(self.mask_ref, dtype=self.dtype)
         n_ref_val  = float(cp.asnumpy(self.N_ref) if xp is cp else self.N_ref)
         if n_ref_val == 0:
             raise ValueError("mask_ref is empty: sum(mask_ref) == 0.")
 
         # ── N_meso ───────────────────────────────────────────────────────────
-        self.N_meso = xp.asarray(N_meso, dtype=xp.float32)
+        self.N_meso = xp.asarray(N_meso, dtype=self.dtype)
         if self.N_meso.shape == self.vol_shape:
             self.N_meso = xp.broadcast_to(
                 self.N_meso, (self.num_orients, *self.vol_shape)
@@ -402,22 +426,25 @@ class MuQSMLinop(sp.linop.Linop):
             )
 
         # ── weight ───────────────────────────────────────────────────────────
-        self.weight = (
-            xp.ones((self.num_orients, *self.vol_shape), dtype=xp.float32)
-            if weight is None
-            else xp.asarray(weight, dtype=xp.float32)
-        )
+        if weight is None:
+            self.weight = xp.ones((self.num_orients, *self.vol_shape), dtype=self.dtype)
+        else:
+            self.weight = xp.asarray(weight, dtype=self.dtype)
+            if self.weight.shape == self.vol_shape:
+                self.weight = xp.broadcast_to(
+                    self.weight, (self.num_orients, *self.vol_shape)
+                ).copy()
         if self.weight.shape != (self.num_orients, *self.vol_shape):
             raise ValueError(
                 f"weight shape {self.weight.shape} must be "
-                f"{(self.num_orients, *self.vol_shape)}."
+                f"{self.vol_shape} or {(self.num_orients, *self.vol_shape)}."
             )
 
         # ── dipole kernels ───────────────────────────────────────────────────
         self.dip_k_list = [
             xp.asarray(
-                Dipole_Kernel(self.vol_shape, voxel_size, B0_dir=b0),
-                dtype=xp.complex64,
+                Dipole_Kernel(self.vol_shape, voxel_size, B0_dir=b0, dtype=self.dtype),
+                dtype=self.complex_dtype,
             )
             for b0 in self.B0_dirs
         ]
@@ -442,7 +469,7 @@ class MuQSMLinop(sp.linop.Linop):
 
         out = xp.empty(
             (self.num_orients, *self.vol_shape),
-            dtype=xp.result_type(input.real.dtype, xp.float32),
+            dtype=xp.result_type(input.real.dtype, self.dtype),
         )
         for i in range(self.num_orients):
             field   = ifftn(Fx * self.dip_k_list[i]).real + self.N_meso[i] * x_roi
@@ -465,7 +492,7 @@ class MuQSMAdjointLinop(sp.linop.Linop):
         xp, fftn, ifftn = _get_module_and_fft(input)
 
         y   = input.reshape((A.num_orients, *A.vol_shape))
-        acc = xp.zeros(A.vol_shape, dtype=xp.result_type(input.real.dtype, xp.float32))
+        acc = xp.zeros(A.vol_shape, dtype=xp.result_type(input.real.dtype, A.dtype))
 
         for i in range(A.num_orients):
             yw = A.weight[i] * y[i]
@@ -526,6 +553,8 @@ class MuQSMLinop_S(sp.linop.Linop):
         Data weight. Default: ones.
     use_gpu : bool
     dtype : numpy dtype
+        float32 or float64 coefficient precision, with matching complex kernels.
+        Outputs preserve the higher precision of the input and operator.
     """
 
     def __init__(
@@ -542,10 +571,10 @@ class MuQSMLinop_S(sp.linop.Linop):
     ):
         self.vol_shape = tuple(int(v) for v in N)
         self.num_vox   = int(np.prod(self.vol_shape))
-        self.dtype     = dtype
+        self.dtype, self.complex_dtype = _operator_dtypes(dtype)
 
         # ── B0 directions ────────────────────────────────────────────────────
-        B0_dirs_np = _to_numpy(B0_dirs).astype(np.float32)
+        B0_dirs_np = _to_numpy(B0_dirs).astype(self.dtype)
         _validate_directions(B0_dirs_np)
         if B0_dirs_np.shape == (3,):
             B0_dirs_np = B0_dirs_np[None, :]
@@ -565,21 +594,21 @@ class MuQSMLinop_S(sp.linop.Linop):
         super().__init__(oshape=oshape, ishape=ishape, repr_str="MuQSMLinop_S")
 
         # ── masks ────────────────────────────────────────────────────────────
-        self.mask_roi = xp.asarray(mask_roi, dtype=xp.float32)
+        self.mask_roi = xp.asarray(mask_roi, dtype=self.dtype)
         if self.mask_roi.shape != self.vol_shape:
             raise ValueError(f"mask_roi shape {self.mask_roi.shape} != vol_shape {self.vol_shape}.")
 
         self.mask_ref = (1.0 - self.mask_roi if mask_ref is None
-                         else xp.asarray(mask_ref, dtype=xp.float32))
+                         else xp.asarray(mask_ref, dtype=self.dtype))
         if self.mask_ref.shape != self.vol_shape:
             raise ValueError(f"mask_ref shape {self.mask_ref.shape} != vol_shape {self.vol_shape}.")
 
-        self.N_ref = xp.sum(self.mask_ref)
+        self.N_ref = xp.sum(self.mask_ref, dtype=self.dtype)
         if float(_to_numpy(self.N_ref)) == 0:
             raise ValueError("mask_ref is empty: sum(mask_ref) == 0.")
 
         # ── N_meso ───────────────────────────────────────────────────────────
-        self.N_meso = xp.asarray(N_meso, dtype=xp.float32)
+        self.N_meso = xp.asarray(N_meso, dtype=self.dtype)
         if self.N_meso.shape == self.vol_shape:
             self.N_meso = xp.broadcast_to(
                 self.N_meso, (self.num_orients, *self.vol_shape)
@@ -592,9 +621,9 @@ class MuQSMLinop_S(sp.linop.Linop):
 
         # ── weight ───────────────────────────────────────────────────────────
         if weight is None:
-            self.weight = xp.ones((self.num_orients, *self.vol_shape), dtype=xp.float32)
+            self.weight = xp.ones((self.num_orients, *self.vol_shape), dtype=self.dtype)
         else:
-            self.weight = xp.asarray(weight, dtype=xp.float32)
+            self.weight = xp.asarray(weight, dtype=self.dtype)
             if self.weight.shape == self.vol_shape:
                 self.weight = xp.broadcast_to(self.weight, (self.num_orients, *self.vol_shape)).copy()
         if self.weight.shape != (self.num_orients, *self.vol_shape):
@@ -603,7 +632,8 @@ class MuQSMLinop_S(sp.linop.Linop):
 
         # ── dipole kernels ───────────────────────────────────────────────────
         self.dip_k_list = [
-            xp.asarray(Dipole_Kernel(self.vol_shape, voxel_size, B0_dir=b0), dtype=xp.complex64)
+            xp.asarray(Dipole_Kernel(self.vol_shape, voxel_size, B0_dir=b0, dtype=self.dtype),
+                       dtype=self.complex_dtype)
             for b0 in self.B0_dirs
         ]
 
@@ -631,7 +661,7 @@ class MuQSMLinop_S(sp.linop.Linop):
         u_roi = u * self.mask_roi
 
         out = xp.empty((self.num_orients, *self.vol_shape),
-                       dtype=xp.result_type(input.real.dtype, xp.float32))
+                       dtype=xp.result_type(input.real.dtype, self.dtype))
         for i in range(self.num_orients):
             field  = ifftn(Fchi * self.dip_k_list[i]).real - self.N_meso[i] * u_roi
             out[i] = self.weight[i] * (field - xp.mean(field))
@@ -654,7 +684,7 @@ class MuQSMAdjointLinop_S(sp.linop.Linop):
         xp, fftn, ifftn = _get_module_and_fft(input)
 
         y     = input.reshape((A.num_orients, *A.vol_shape))
-        dtype = xp.result_type(input.real.dtype, xp.float32)
+        dtype = xp.result_type(input.real.dtype, A.dtype)
         g_chi = xp.zeros(A.vol_shape, dtype=dtype)
         g_u   = xp.zeros(A.vol_shape, dtype=dtype)
 
@@ -724,6 +754,8 @@ class MuQSMLinop_CS(sp.linop.Linop):
         Data weight. Default: ones.
     use_gpu : bool
     dtype : numpy dtype
+        float32 or float64 coefficient precision, with matching complex kernels.
+        Outputs preserve the higher precision of the input and operator.
     """
 
     def __init__(
@@ -740,10 +772,10 @@ class MuQSMLinop_CS(sp.linop.Linop):
     ):
         self.vol_shape = tuple(int(v) for v in N)
         self.num_vox   = int(np.prod(self.vol_shape))
-        self.dtype     = dtype
+        self.dtype, self.complex_dtype = _operator_dtypes(dtype)
 
         # ── B0 directions ────────────────────────────────────────────────────
-        B0_dirs_np = _to_numpy(B0_dirs).astype(np.float32)
+        B0_dirs_np = _to_numpy(B0_dirs).astype(self.dtype)
         _validate_directions(B0_dirs_np)
         if B0_dirs_np.shape == (3,):
             B0_dirs_np = B0_dirs_np[None, :]
@@ -763,21 +795,21 @@ class MuQSMLinop_CS(sp.linop.Linop):
         super().__init__(oshape=oshape, ishape=ishape, repr_str="MuQSMLinop_CS")
 
         # ── masks ────────────────────────────────────────────────────────────
-        self.mask_roi = xp.asarray(mask_roi, dtype=xp.float32)
+        self.mask_roi = xp.asarray(mask_roi, dtype=self.dtype)
         if self.mask_roi.shape != self.vol_shape:
             raise ValueError(f"mask_roi shape {self.mask_roi.shape} != vol_shape {self.vol_shape}.")
 
         self.mask_ref = (1.0 - self.mask_roi if mask_ref is None
-                         else xp.asarray(mask_ref, dtype=xp.float32))
+                         else xp.asarray(mask_ref, dtype=self.dtype))
         if self.mask_ref.shape != self.vol_shape:
             raise ValueError(f"mask_ref shape {self.mask_ref.shape} != vol_shape {self.vol_shape}.")
 
-        self.N_ref = xp.sum(self.mask_ref)
+        self.N_ref = xp.sum(self.mask_ref, dtype=self.dtype)
         if float(_to_numpy(self.N_ref)) == 0:
             raise ValueError("mask_ref is empty: sum(mask_ref) == 0.")
 
         # ── N_meso ───────────────────────────────────────────────────────────
-        self.N_meso = xp.asarray(N_meso, dtype=xp.float32)
+        self.N_meso = xp.asarray(N_meso, dtype=self.dtype)
         if self.N_meso.shape == self.vol_shape:
             self.N_meso = xp.broadcast_to(
                 self.N_meso, (self.num_orients, *self.vol_shape)
@@ -790,9 +822,9 @@ class MuQSMLinop_CS(sp.linop.Linop):
 
         # ── weight ───────────────────────────────────────────────────────────
         if weight is None:
-            self.weight = xp.ones((self.num_orients, *self.vol_shape), dtype=xp.float32)
+            self.weight = xp.ones((self.num_orients, *self.vol_shape), dtype=self.dtype)
         else:
-            self.weight = xp.asarray(weight, dtype=xp.float32)
+            self.weight = xp.asarray(weight, dtype=self.dtype)
             if self.weight.shape == self.vol_shape:
                 self.weight = xp.broadcast_to(self.weight, (self.num_orients, *self.vol_shape)).copy()
         if self.weight.shape != (self.num_orients, *self.vol_shape):
@@ -801,7 +833,8 @@ class MuQSMLinop_CS(sp.linop.Linop):
 
         # ── dipole kernels ───────────────────────────────────────────────────
         self.dip_k_list = [
-            xp.asarray(Dipole_Kernel(self.vol_shape, voxel_size, B0_dir=b0), dtype=xp.complex64)
+            xp.asarray(Dipole_Kernel(self.vol_shape, voxel_size, B0_dir=b0, dtype=self.dtype),
+                       dtype=self.complex_dtype)
             for b0 in self.B0_dirs
         ]
 
@@ -834,7 +867,7 @@ class MuQSMLinop_CS(sp.linop.Linop):
         meso  = u_R - w_roi                    # chi^c - chi^s * lambda^c
 
         out = xp.empty((self.num_orients, *self.vol_shape),
-                       dtype=xp.result_type(input.real.dtype, xp.float32))
+                       dtype=xp.result_type(input.real.dtype, self.dtype))
         for i in range(self.num_orients):
             field  = ifftn(F_tot * self.dip_k_list[i]).real + self.N_meso[i] * meso
             out[i] = self.weight[i] * (field - xp.mean(field))
@@ -857,7 +890,7 @@ class MuQSMAdjointLinop_CS(sp.linop.Linop):
         xp, fftn, ifftn = _get_module_and_fft(input)
 
         y      = input.reshape((A.num_orients, *A.vol_shape))
-        dtype  = xp.result_type(input.real.dtype, xp.float32)
+        dtype  = xp.result_type(input.real.dtype, A.dtype)
         g_dip  = xp.zeros(A.vol_shape, dtype=dtype)    # adjoint of the dipole term
         g_meso = xp.zeros(A.vol_shape, dtype=dtype)    # adjoint of the meso term
 
@@ -882,7 +915,13 @@ class MuQSMAdjointLinop_CS(sp.linop.Linop):
 #%% data preparation and solution helpers
 def prepare_y_for_sigpy(LoFd, A, remove_mean=False, apply_weight=False):
     """
-    Prepare measured field map for MuQSMLinop reconstruction.
+    Prepare an unweighted measured field for a QSM or μQSM operator.
+
+    Normal reconstruction call sites should explicitly set remove_mean=True
+    and apply_weight=True to match the operator: center each orientation over
+    the spatial axes, then multiply by its weights. Defaults are retained for
+    callers that supply data already prepared in either respect. Do not apply
+    weighting twice. Data are converted to the operator's real dtype.
 
     Parameters
     ----------
@@ -892,8 +931,8 @@ def prepare_y_for_sigpy(LoFd, A, remove_mean=False, apply_weight=False):
             A.vol_shape
             (K, *A.vol_shape)
             flattened A.oshape
-    A : MuQSMLinop
-        Your SigPy linear operator.
+    A : QSMLinop, MuQSMLinop, MuQSMLinop_S, or MuQSMLinop_CS
+        The operator that will consume the prepared field.
     remove_mean : bool
         Should be True because your forward operator removes spatial mean.
     apply_weight : bool
@@ -906,7 +945,7 @@ def prepare_y_for_sigpy(LoFd, A, remove_mean=False, apply_weight=False):
     """
     xp = A.xp
 
-    y = xp.asarray(LoFd, dtype=xp.float32)
+    y = xp.asarray(LoFd, dtype=A.dtype)
 
     # Case 1: single orientation field, shape = vol_shape
     if y.shape == A.vol_shape:
