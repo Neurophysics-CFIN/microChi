@@ -5,8 +5,8 @@
 #   plot_comparison  : 3 x 3 figure -- one component, GT vs. several methods
 #                      (e.g. QSM and muQSM)
 #
-# All plotting parameters are identical to the original scripts. As there, the style is
-# set globally (plt.rcParams), so it is in effect whenever the figure is drawn or saved.
+# Styles use moderate DPI for interactive display and separate high-resolution
+# export settings. They remain active whenever the figure is drawn or saved.
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -156,7 +156,7 @@ RC_COMPONENTS = {
     "axes.labelsize": FS_COMPONENTS["label"],
     "xtick.labelsize": FS_COMPONENTS["tick"],
     "ytick.labelsize": FS_COMPONENTS["tick"],
-    "figure.dpi": 400,
+    "figure.dpi": 100,
     "savefig.dpi": 800,
     "savefig.bbox": "tight",
     "axes.linewidth": 1.2,
@@ -339,7 +339,7 @@ RC_COMPARISON = {
     "axes.labelsize": FS_COMPARISON["label"],
     "xtick.labelsize": FS_COMPARISON["tick"],
     "ytick.labelsize": FS_COMPARISON["tick"],
-    "figure.dpi": 400,
+    "figure.dpi": 100,
     "savefig.dpi": 800,
     "savefig.bbox": "tight",
     "axes.linewidth": 1.2,
@@ -517,7 +517,7 @@ RC_SNR = {
     "axes.labelsize": FS_SNR["label"],
     "xtick.labelsize": FS_SNR["tick"],
     "ytick.labelsize": FS_SNR["tick"],
-    "figure.dpi": 400,
+    "figure.dpi": 100,
     "savefig.dpi": 800,
     "savefig.bbox": "tight",
     "axes.linewidth": 1.3,
