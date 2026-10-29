@@ -25,9 +25,26 @@ def _solve_cg(A, y, max_iter, lambda_reg=0.0, show_progress=True):
     ).run()
 
 
+def _solve_tv(A, y, G, proxg, *, max_iter=300, max_cg_iter=10):
+    """Run TV from zero, handling SigPy's float32 zero-gradient warning."""
+    solver = sgp.app.LinearLeastSquares(
+        A=A, y=y, x=A.xp.zeros(A.ishape, dtype=A.dtype),
+        G=G, proxg=proxg, lamda=0, solver='ADMM', rho=1.0,
+        max_iter=max_iter, max_cg_iter=max_cg_iter, tol=1e-6, show_pbar=False,
+    )
+    # SigPy's Numba soft threshold can flag invalid arithmetic for zero input
+    # while returning the correct zero. Keep handling local to this solve and
+    # reject genuinely nonfinite reconstructions before plotting or exporting.
+    with np.errstate(divide='ignore', invalid='ignore'):
+        chi = solver.run()
+    if not bool(_to_numpy(A.xp.all(A.xp.isfinite(chi)))):
+        raise RuntimeError('TV solver returned nonfinite values; inspect inputs and solver settings.')
+    return chi
+
+
 def run_reconstruction(
     data_dir, result_dir, *, use_gpu=False, show_plots=None,
-    figure_dpi=400, save_dpi=800, l2_lambda=1e-2, tv_lambda=1e-3,
+    figure_dpi=100, save_dpi=800, l2_lambda=1e-2, tv_lambda=1e-3,
     b0_dir=(1, 0, 0), show_progress=True,
 ):
     """Run the paper experiments, save three archives and five figures.
@@ -36,6 +53,7 @@ def run_reconstruction(
     multi_orientation, single_orientation_l2, and single_orientation_tv.
     Input/output directories are explicit; the examples supply checkout defaults.
     show_plots=None displays figures unless Matplotlib uses the Agg backend.
+    figure_dpi controls the interactive display; save_dpi controls file exports.
     """
     data_dir, result_dir = Path(data_dir), Path(result_dir)
     show_plots = plt.get_backend().lower() != 'agg' if show_plots is None else show_plots
@@ -58,31 +76,48 @@ def run_reconstruction(
 
     # Standard QSM has the same geometry and masks in all three experiments.
     A_qsm = QSMLinop(N_lr, voxel_size_lr, dir_samp, mask_roi, use_gpu=use_gpu)
-    A_cyl = MuQSMLinop(N_lr, voxel_size_lr, dir_samp, mask_roi, N_meso,
-                       use_gpu=use_gpu)
-    A_sph = MuQSMLinop_S(N_lr, voxel_size_lr, dir_samp, mask_roi, N_meso,
-                         use_gpu=use_gpu)
-    A_comp = MuQSMLinop_CS(N_lr, voxel_size_lr, dir_samp, mask_roi, N_meso,
-                           use_gpu=use_gpu)
-    xp = A_cyl.xp
-    Y_cyl = xp.asarray(LoFds['cylindrical'])
-    Y_sph = xp.asarray(LoFds['spherical'])
-    Y_comp = xp.asarray(LoFds['composite'])
-
-    # Multi-orientation reconstructions: preserve the original solve order.
-    chi_cyl_muqsm = _to_numpy(_solve_cg(A_cyl, Y_cyl, 100, show_progress=show_progress)).copy()
-    chi_cyl_qsm = _to_numpy(_solve_cg(A_qsm, Y_cyl, 100, show_progress=show_progress)).copy()
-    solution_sph = _solve_cg(A_sph, Y_sph, 50, show_progress=show_progress)
+    A_cyl = MuQSMLinop(N_lr, voxel_size_lr, dir_samp, mask_roi, N_meso, use_gpu=use_gpu)
+    A_sph = MuQSMLinop_S(N_lr, voxel_size_lr, dir_samp, mask_roi, N_meso, use_gpu=use_gpu)
+    A_comp = MuQSMLinop_CS(N_lr, voxel_size_lr, dir_samp, mask_roi, N_meso, use_gpu=use_gpu)
+    # Match each consuming operator: center raw fields before applying its weights.
+    # Prepare observations once per solve; _solve_cg accepts already prepared data.
+    chi_cyl_muqsm = _to_numpy(_solve_cg(
+        A_cyl, prepare_y_for_sigpy(LoFds['cylindrical'], A_cyl,
+                                  remove_mean=True, apply_weight=True),
+        100, show_progress=show_progress,
+    )).copy()
+    chi_cyl_qsm = _to_numpy(_solve_cg(
+        A_qsm, prepare_y_for_sigpy(LoFds['cylindrical'], A_qsm,
+                                  remove_mean=True, apply_weight=True),
+        100, show_progress=show_progress,
+    )).copy()
+    solution_sph = _solve_cg(
+        A_sph, prepare_y_for_sigpy(LoFds['spherical'], A_sph,
+                                  remove_mean=True, apply_weight=True),
+        50, show_progress=show_progress,
+    )
     chi_sph_muqsm, u_sph = split_solution_S(solution_sph, A_sph)
     chi_sph_muqsm, u_sph = _to_numpy(chi_sph_muqsm).copy(), _to_numpy(u_sph).copy()
-    chi_sph_qsm = _to_numpy(_solve_cg(A_qsm, Y_sph, 100, show_progress=show_progress)).copy()
-    solution_comp = _solve_cg(A_comp, Y_comp, 100, show_progress=show_progress)
+    chi_sph_qsm = _to_numpy(_solve_cg(
+        A_qsm, prepare_y_for_sigpy(LoFds['spherical'], A_qsm,
+                                  remove_mean=True, apply_weight=True),
+        100, show_progress=show_progress,
+    )).copy()
+    solution_comp = _solve_cg(
+        A_comp, prepare_y_for_sigpy(LoFds['composite'], A_comp,
+                                  remove_mean=True, apply_weight=True),
+        100, show_progress=show_progress,
+    )
     chi_comp_cyl, chi_comp_sph, u_comp = split_solution_CS(solution_comp, A_comp)
     chi_comp_cyl = _to_numpy(chi_comp_cyl).copy()
     chi_comp_sph = _to_numpy(chi_comp_sph).copy()
     u_comp = _to_numpy(u_comp).copy()
     chi_comp_muqsm = chi_comp_cyl + chi_comp_sph
-    chi_comp_qsm = _to_numpy(_solve_cg(A_qsm, Y_comp, 100, show_progress=show_progress)).copy()
+    chi_comp_qsm = _to_numpy(_solve_cg(
+        A_qsm, prepare_y_for_sigpy(LoFds['composite'], A_qsm,
+                                  remove_mean=True, apply_weight=True),
+        100, show_progress=show_progress,
+    )).copy()
 
     multi = dict(
         chi_cyl_multi_muqsm=chi_cyl_muqsm, chi_cyl_multi_qsm=chi_cyl_qsm,
@@ -132,7 +167,7 @@ def run_reconstruction(
             A_single = MuQSMLinop(N_lr, voxel_size_lr, B0_dir, mask_roi,
                                   N_meso_single, use_gpu=use_gpu)
             prepared_fields = {
-                key: prepare_y_for_sigpy(field, A_single, remove_mean=False, apply_weight=False)
+                key: prepare_y_for_sigpy(field, A_single, remove_mean=True, apply_weight=True)
                 for key, field in noisy_fields.items()
             }
             recon_l2 = {}
@@ -145,11 +180,7 @@ def run_reconstruction(
             proxg = sgp.prox.L1Reg(G.oshape, tv_lambda)
             recon_tv = {}
             for key, y in prepared_fields.items():
-                chi = sgp.app.LinearLeastSquares(
-                    A=A_single, y=y, x=xp.zeros(A_single.ishape, dtype=xp.float32),
-                    G=G, proxg=proxg, lamda=0, solver='ADMM', rho=1.0,
-                    max_iter=300, max_cg_iter=10, tol=1e-6, show_pbar=False,
-                ).run()
+                chi = _solve_tv(A_single, y, G, proxg)
                 recon_tv[key] = _to_numpy(chi).copy()
 
             fig = plotting.plot_snr_comparison(
