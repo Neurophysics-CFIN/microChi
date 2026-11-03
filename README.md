@@ -54,7 +54,7 @@ the bundled 32³ cylindrical phantom on CPU. It expects a finite 32³ result and
 a relative field residual below 1, and saves no output. Neither check replaces
 validation against experimental data or reproduces the full experiment.
 
-## Reconstruct your data
+## Reconstruction with your own data
 
 Prepare the inputs described in [the reconstruction tutorial](docs/reconstruction_tutorial.md),
 then run from the project folder:
@@ -64,9 +64,7 @@ python Micro_QSM_Recon.py --input-dir "C:\path\to\inputs" --output-dir "C:\path\
 python Micro_QSM_Recon.py --input-dir "C:\path\to\inputs" --output-dir "C:\path\to\outputs" --input-format nifti --no-display
 ```
 
-Alternatively, edit `INPUT_DIR`, `OUTPUT_DIR`, and `INPUT_FORMAT` near the top
-of `Micro_QSM_Recon.py`, then run the script in VS Code. Use `--help` to see all
-available settings.
+Use `--help` to see all available settings.
 
 The script reconstructs QSM L2, μQSM L2, QSM TV, and μQSM TV maps and produces
 comparison figures and a run record. Maps are cropped to the input grid and
@@ -82,31 +80,50 @@ You can also edit `REGULARIZATION` near the top of the script. Exported map
 variables and NIfTI filenames use `Chi_QSM_L2`, `Chi_muQSM_L2`, `Chi_QSM_TV`,
 and `Chi_muQSM_TV`, according to the selected method.
 
-## Reproduce the experiments
+## Examples
+
+The scripts in `examples/` demonstrate QSM and μQSM reconstruction using
+synthetic phantoms and prepared ex vivo MRI data.
+
+### Phantom examples
+
+The cylindrical, spherical, and composite phantom examples use the five
+archives bundled in `data/phantoms/`. From the project folder, run:
 
 ```powershell
-python examples/generate_phantoms.py
 python examples/phantom_reconstruction.py
-python examples/exvivo_reconstruction.py --input-dir "C:\path\to\exvivo_inputs" --output-dir "C:\path\to\outputs" --no-display
-python examples/exvivo_lcurve.py --input-dir "C:\path\to\exvivo_inputs" --output-dir "C:\path\to\outputs" --no-display --no-use-gpu
 ```
 
-Edit the settings at the top of each script and replace the example paths with
-your own. Phantom reconstruction uses the five bundled archives in
-`data/phantoms/`. Generating the default `1024³` phantoms requires substantial
-memory and runtime.
+To generate new phantom data, run `python examples/generate_phantoms.py`.
+The default `1024³` generation requires substantial memory and runtime. To
+reconstruct newly generated data, change `DATA_DIR` in
+`examples/phantom_reconstruction.py` to `data/generated/`.
 
-The ex vivo examples require six prepared MATLAB files. The ex vivo dataset is
-not included in the repository and can be downloaded [here](https://github.com/Neurophysics-CFIN/MesoChi/releases/tag/ex-vivo_example-data). 
-Please prepare the inputs in the format described in the reconstruction tutorial.
+### Ex vivo example
 
-The L-curve example estimates the QSM and μQSM **L2** parameters. Review the
-estimated values and transfer them manually into the reconstruction settings.
-TV reconstruction is also available.
+The ex vivo example combines prepared local phase and diffusion MRI data to
+reconstruct conventional QSM and microstructure-informed μQSM maps with L2
+and TV regularization.
 
-The examples resolve default paths relative to their own files, so they can run
-from another working directory after the package is installed. The ex vivo
-L-curve example enables GPU by default (--use-gpu) and also can use `--no-use-gpu` to run it on the CPU.
+Download [Ex-vivo_example_data.zip](https://github.com/Neurophysics-CFIN/MesoChi/releases/download/ex-vivo_example-data/Ex-vivo_example_data.zip)
+from the **Assets** section of the [first GitHub release](https://github.com/Neurophysics-CFIN/MesoChi/releases/tag/ex-vivo_example-data).
+Extract the six MATLAB files directly into `data/exvivo/`: `DWI_FBI.mat`,
+`Phase_map.mat`, `mask_phase.mat`, `mask_wm.mat`, `mask_csf.mat`, and
+`meta_info.mat`. With the MesoChi environment active, run from the project folder:
+
+```powershell
+python examples/exvivo_reconstruction.py --input-dir data/exvivo --output-dir results/exvivo --no-display
+```
+
+To estimate the QSM and μQSM **L2** regularization parameters, run:
+
+```powershell
+python examples/exvivo_lcurve.py --input-dir data/exvivo --output-dir results/exvivo/l_curve --no-display --no-use-gpu
+```
+
+Review the estimated L2 values and transfer them manually into the reconstruction
+settings. The ex vivo L-curve example enables GPU by default (--use-gpu) and also can use `--no-use-gpu` to run it on the CPU.
+Input formats and preparation requirements are described in [the reconstruction tutorial](docs/reconstruction_tutorial.md).
 
 ## Citation
 
