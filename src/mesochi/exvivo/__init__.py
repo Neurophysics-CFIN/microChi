@@ -8,7 +8,7 @@ def prepare_exvivo_data(*args, **kwargs):
 
 
 def run_exvivo_reconstruction(*args, **kwargs):
-    """Reconstruct and export four maps; see pipeline.run_exvivo_reconstruction."""
+    """Reconstruct with L2, TV, or both; see pipeline.run_exvivo_reconstruction."""
     from .pipeline import run_exvivo_reconstruction as run
     return run(*args, **kwargs)
 
