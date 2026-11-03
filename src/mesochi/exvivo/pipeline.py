@@ -13,8 +13,8 @@ from .io import (load_required_mat, read_metadata, load_weight, prepare_exports,
 
 CASES = ('muqsm_l2', 'qsm_l2', 'muqsm_tv', 'qsm_tv')
 MAP_KEYS = {
-    'muqsm_l2': 'chi_muqsm_ref', 'qsm_l2': 'chi_qsm_ref',
-    'muqsm_tv': 'chi_muqsm_tv_ref', 'qsm_tv': 'chi_qsm_tv_ref',
+    'muqsm_l2': 'Chi_muQSM_L2', 'qsm_l2': 'Chi_QSM_L2',
+    'muqsm_tv': 'Chi_muQSM_TV', 'qsm_tv': 'Chi_QSM_TV',
 }
 
 
@@ -159,7 +159,7 @@ def crop_and_reference(chi, data):
 
 def run_exvivo_reconstruction(
     input_dir, output_dir, *, input_format='mat', weight_file=None, nifti_reference=None,
-    output_formats=('npz', 'mat', 'nifti'), use_gpu=False,
+    output_formats=('npz', 'mat', 'nifti'), regularization='both', use_gpu=False,
     b_fbi=None, l_max=6, fbi_method='corrected', Da=None, D0=2e-3,
     qsm_l2_lambda=8e-3, muqsm_l2_lambda=8e-3,
     qsm_tv_lambda=1e-5, muqsm_tv_lambda=1e-5,
@@ -167,14 +167,23 @@ def run_exvivo_reconstruction(
     make_plots=True, show_plots=None, figure_dpi=400, save_dpi=800,
     slice_xs=None, slice_indices=None, show_progress=False,
 ):
-    """Run four reconstructions and export maps, figures, and a JSON run record.
+    """Run QSM/μQSM with L2, TV, or both and export maps and a run record.
 
+    regularization selects 'l2', 'tv', or 'both' (default). Only the selected
+    reconstructions are calculated and exported, under Chi_QSM_L2,
+    Chi_muQSM_L2, Chi_QSM_TV, and/or Chi_muQSM_TV.
     NIfTI needs a matching reference image. Without one, NPZ/MAT exports continue.
     L-curve selections are never read automatically; supply the four lambdas.
     Returns independent cropped arrays under maps, and settings/saved_files.
     """
-    lambdas = dict(qsm_l2=qsm_l2_lambda, muqsm_l2=muqsm_l2_lambda,
-                   qsm_tv=qsm_tv_lambda, muqsm_tv=muqsm_tv_lambda)
+    if not isinstance(regularization, str) or regularization.lower() not in ('l2', 'tv', 'both'):
+        raise ValueError("regularization must be 'l2', 'tv', or 'both'.")
+    regularization = regularization.lower()
+    cases = tuple(case for case in CASES
+                  if regularization == 'both' or case.endswith('_' + regularization))
+    all_lambdas = dict(qsm_l2=qsm_l2_lambda, muqsm_l2=muqsm_l2_lambda,
+                       qsm_tv=qsm_tv_lambda, muqsm_tv=muqsm_tv_lambda)
+    lambdas = {case: all_lambdas[case] for case in cases}
     validate_solver_settings(lambdas.values(), cg_max_iter, tv_max_iter, tv_max_cg_iter, tol, rho)
     _get_backend(use_gpu)
     meta = read_metadata(input_dir, input_format)
@@ -196,7 +205,7 @@ def run_exvivo_reconstruction(
                            tv_max_cg_iter=tv_max_cg_iter, tol=tol, rho=rho,
                            show_progress=show_progress)
     maps, iterations = {}, {}
-    for case in CASES:
+    for case in cases:
         model, penalty = case.split('_')
         print(f'Reconstructing {case}: lambda={lambdas[case]:.6g}')
         chi, iterations[case] = solve_case(operators[model], y, penalty, lambdas[case], G, **solver_settings)
@@ -215,7 +224,8 @@ def run_exvivo_reconstruction(
         )
     record_path = output_dir / 'exvivo_run.json'
     saved_files.append(str(record_path.resolve()))
-    settings = dict(**data['settings'], metadata=meta, lambdas=lambdas, **solver_settings,
+    settings = dict(**data['settings'], metadata=meta, regularization=regularization,
+                    lambdas=lambdas, **solver_settings,
                     use_gpu=use_gpu, output_formats=exports['formats'],
                     nifti_reference=None if nifti_reference is None else str(Path(nifti_reference).resolve()),
                     nifti_status=exports['nifti_status'], make_plots=make_plots,
