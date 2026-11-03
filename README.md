@@ -1,16 +1,10 @@
 # MesoChi
 
-MesoChi is an open-source Python toolbox for microstructure-informed quantitative susceptibility mapping (μQSM). 
-It combines prepared local phase data with diffusion MRI. It applys fiber-ball imaging (FBI)
-to estimate scatter matrices that inform the mesoscopic contribution to the
-μQSM forward model. The toolbox reconstructs conventional QSM and μQSM maps
-using L2 and total variation (TV) regularization. It also includes scripts for
-the phantom and ex vivo experiments.
+MesoChi is an open-source Python toolbox for microstructure-informed quantitative susceptibility mapping (μQSM). It combines preprocessed phase map with diffusion MRI data, using fiber ball imaging (FBI) to estimate the scatter matrices that parameterize the mesoscopic contribution to the μQSM forward model. Both conventional QSM and μQSM maps can be reconstructed by solving least squares with L2 Tikhonov or L1 total variation (TV) regularization. The repository also includes scripts to reproduce the phantom and ex vivo experiments.
 
 ## Install
 
-Install Miniconda, Miniforge, or another Conda distribution, which requires a minimum Conda version of 26.1.1.
-Then open a terminal in the project folder containing `environment.yml` and run:
+Install Miniconda, Miniforge, or another Conda distribution (Conda 26.1.1 or later is required). Then open a terminal in the project folder containing environment.yml and run:
 
 ```powershell
 conda env create -f environment.yml
@@ -24,9 +18,9 @@ and installs the repository in editable mode. If you use VS Code, select the
 reactivate the environment and run `python -m pip install -e ".[nifti]"` from
 its new location.
 
-GPU support for acceleration is optional. For an NVIDIA GPU, install the CuPy package matching
+GPU acceleration is optional. For an NVIDIA GPU, install the CuPy package matching
 your CUDA version in the activated `mesochi` environment. For example, with a
-compatible NVIDIA driver and CUDA 13 toolkit:
+compatible NVIDIA driver and the CUDA 13 toolkit:
 
 ```powershell
 python -m pip install "cupy-cuda13x==14.2.0"
@@ -35,13 +29,11 @@ python -m pip install "cupy-cuda13x==14.2.0"
 See the [CuPy installation guide](https://docs.cupy.dev/en/stable/install.html)
 for other CUDA versions. The reconstruction script automatically selects an
 available GPU or falls back to the CPU. Use `--use-gpu` or `--no-use-gpu` to
-override this selection. FBI preparation runs on the CPU; reconstruction
-operators and solvers run on the selected device.
+override this selection. FBI preparation runs on the CPU.
 
 ## Verify the installation
 
-After installing and activating the environment, run the CPU numerical tests
-from the project directory:
+After installing and activating the environment, run the CPU numerical tests from the project folder:
 
 ```powershell
 python -m unittest discover -s tests -v
@@ -57,7 +49,7 @@ validation against experimental data or reproduces the full experiment.
 ## Reconstruction with your own data
 
 Prepare the inputs described in [the reconstruction tutorial](docs/reconstruction_tutorial.md),
-then run from the project folder:
+then run one of the following commands from the project folder, for MATLAB or NIfTI inputs, respectively:
 
 ```powershell
 python Micro_QSM_Recon.py --input-dir "C:\path\to\inputs" --output-dir "C:\path\to\outputs" --input-format mat --no-display
@@ -67,9 +59,9 @@ python Micro_QSM_Recon.py --input-dir "C:\path\to\inputs" --output-dir "C:\path\
 Use `--help` to see all available settings.
 
 The script reconstructs QSM L2, μQSM L2, QSM TV, and μQSM TV maps and produces
-comparison figures and a run record. Maps are cropped to the input grid and
-CSF-referenced. By default, they are saved in NumPy and MATLAB formats; NIfTI
-export is also available. A weight map is optional; uniform weights are used
+comparison figures and a run record. The output maps are cropped to the input grid and
+CSF-referenced. By default, they are saved in NumPy and MATLAB formats and NIfTI
+export is also available. A weight map is optional and uniform weights are used
 when it is omitted. For NIfTI export, NIfTI inputs provide the reference image
 automatically, while MATLAB inputs require a matching reference image. Use
 `--no-display` to save figures without opening windows.
@@ -101,12 +93,12 @@ reconstruct newly generated data, change `DATA_DIR` in
 
 ### Ex vivo example
 
-The ex vivo example combines prepared local phase and diffusion MRI data to
+The ex vivo example combines preprocessed local phase map and diffusion MRI data to
 reconstruct conventional QSM and μQSM maps with L2-Tikhonov and L1-TV regularization.
 
 Download [Ex-vivo_example_data.zip](https://github.com/Neurophysics-CFIN/MesoChi/releases/download/ex-vivo_example-data/Ex-vivo_example_data.zip)
 from the **Assets** section of the [first GitHub release](https://github.com/Neurophysics-CFIN/MesoChi/releases/tag/ex-vivo_example-data).
-Extract the six MATLAB files directly into `data/exvivo/`: `DWI_FBI.mat`,
+Extract the six MATLAB files directly into the directory, `data/exvivo/`: `DWI_FBI.mat`,
 `Phase_map.mat`, `mask_phase.mat`, `mask_wm.mat`, `mask_csf.mat`, and
 `meta_info.mat`. With the MesoChi environment active, run from the project folder:
 
