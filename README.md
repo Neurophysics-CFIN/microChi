@@ -60,6 +60,12 @@ when it is omitted. For NIfTI export, NIfTI inputs provide the reference image
 automatically, while MATLAB inputs require a matching reference image. Use
 `--no-display` to save figures without opening windows.
 
+Use `--regularization l2` or `--regularization tv` to reconstruct only the
+selected method, or `--regularization both` (the default) to run all four maps.
+You can also edit `REGULARIZATION` near the top of the script. Exported map
+variables and NIfTI filenames use `Chi_QSM_L2`, `Chi_muQSM_L2`, `Chi_QSM_TV`,
+and `Chi_muQSM_TV`, according to the selected method.
+
 ## Reproduce the experiments
 
 ```powershell
