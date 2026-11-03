@@ -1,4 +1,4 @@
-"""Reconstruct QSM and muQSM from a prepared MATLAB or NIfTI dataset."""
+"""Reconstruct QSM and muQSM with L2, TV, or both from MATLAB or NIfTI data."""
 #%% Imports
 import argparse
 from pathlib import Path
@@ -24,6 +24,7 @@ INPUT_FORMAT = 'mat'  # 'mat' or 'nifti'.
 WEIGHT_FILE = None  # Optional .npy or .mat containing weight; None means ones.
 NIFTI_REFERENCE = None  # Matching .nii/.nii.gz required only for NIfTI export.
 OUTPUT_FORMATS = ('npz', 'mat', 'nifti')
+REGULARIZATION = 'both'  # 'l2', 'tv', or 'both'.
 USE_GPU = None  # None selects an available GPU automatically; True or False forces a device.
 B_FBI = None  # First b-value, or the only positive shell when the first is zero.
 L_MAX = 6
@@ -58,6 +59,9 @@ def main(argv=None):
     parser.add_argument('--nifti-reference', type=Path, default=NIFTI_REFERENCE,
                         help='Matching reference image; NIfTI input defaults to its phase image.')
     parser.add_argument('--output-formats', nargs='+', choices=('npz', 'mat', 'nifti'), default=OUTPUT_FORMATS)
+    parser.add_argument('--regularization', type=str.lower, choices=('l2', 'tv', 'both'),
+                        default=REGULARIZATION,
+                        help='Reconstruct QSM and muQSM with L2, TV, or both (default).')
     parser.add_argument('--use-gpu', action=argparse.BooleanOptionalAction, default=USE_GPU)
     parser.add_argument('--b-fbi', type=float, default=B_FBI)
     parser.add_argument('--l-max', type=int, default=L_MAX)
