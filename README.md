@@ -102,8 +102,7 @@ reconstruct newly generated data, change `DATA_DIR` in
 ### Ex vivo example
 
 The ex vivo example combines prepared local phase and diffusion MRI data to
-reconstruct conventional QSM and microstructure-informed μQSM maps with L2
-and TV regularization.
+reconstruct conventional QSM and μQSM maps with L2-Tikhonov and L1-TV regularization.
 
 Download [Ex-vivo_example_data.zip](https://github.com/Neurophysics-CFIN/MesoChi/releases/download/ex-vivo_example-data/Ex-vivo_example_data.zip)
 from the **Assets** section of the [first GitHub release](https://github.com/Neurophysics-CFIN/MesoChi/releases/tag/ex-vivo_example-data).
