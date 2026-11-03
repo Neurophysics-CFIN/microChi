@@ -9,7 +9,7 @@ the phantom and ex vivo experiments.
 
 ## Install
 
-Install Miniconda, Miniforge, or another Conda distribution. This environment requires a minimum Conda version of 26.1.1.
+Install Miniconda, Miniforge, or another Conda distribution, which requires a minimum Conda version of 26.1.1.
 Then open a terminal in the project folder containing `environment.yml` and run:
 
 ```powershell
