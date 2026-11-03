@@ -38,6 +38,22 @@ available GPU or falls back to the CPU. Use `--use-gpu` or `--no-use-gpu` to
 override this selection. FBI preparation runs on the CPU; reconstruction
 operators and solvers run on the selected device.
 
+## Verify the installation
+
+After installing and activating the environment, run the CPU numerical tests
+from the project directory:
+
+```powershell
+python -m unittest discover -s tests -v
+python tests/smoke_reconstruction.py
+```
+
+The numerical tests use a small reference fixture and check the operators,
+simulation helpers, and L-curve routines. The smoke check reconstructs QSM on
+the bundled 32³ cylindrical phantom on CPU. It expects a finite 32³ result and
+a relative field residual below 1, and saves no output. Neither check replaces
+validation against experimental data or reproduces the full experiment.
+
 ## Reconstruct your data
 
 Prepare the inputs described in [the reconstruction tutorial](docs/reconstruction_tutorial.md),
@@ -91,22 +107,6 @@ TV reconstruction is also available.
 The examples resolve default paths relative to their own files, so they can run
 from another working directory after the package is installed. The ex vivo
 L-curve example enables GPU by default; use `--no-use-gpu` to run it on the CPU.
-
-## Verify the installation
-
-After installing and activating the environment, run the CPU numerical tests
-from the project directory:
-
-```powershell
-python -m unittest discover -s tests -v
-python tests/smoke_reconstruction.py
-```
-
-The numerical tests use a small reference fixture and check the operators,
-simulation helpers, and L-curve routines. The smoke check reconstructs QSM on
-the bundled 32³ cylindrical phantom on CPU. It expects a finite 32³ result and
-a relative field residual below 1, and saves no output. Neither check replaces
-validation against experimental data or reproduces the full experiment.
 
 ## Citation
 
