@@ -24,7 +24,7 @@ and installs the repository in editable mode. If you use VS Code, select the
 reactivate the environment and run `python -m pip install -e ".[nifti]"` from
 its new location.
 
-GPU support is optional. For an NVIDIA GPU, install the CuPy package matching
+GPU support for acceleration is optional. For an NVIDIA GPU, install the CuPy package matching
 your CUDA version in the activated `mesochi` environment. For example, with a
 compatible NVIDIA driver and CUDA 13 toolkit:
 
