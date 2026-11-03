@@ -97,8 +97,8 @@ your own. Phantom reconstruction uses the five bundled archives in
 memory and runtime.
 
 The ex vivo examples require six prepared MATLAB files. The ex vivo dataset is
-not included in the repository. Dataset can be downloaded [here](https://github.com/Neurophysics-CFIN/MesoChi/releases/tag/ex-vivo_example-data). Prepare the
-inputs in the format described in the reconstruction tutorial.
+not included in the repository and can be downloaded [here](https://github.com/Neurophysics-CFIN/MesoChi/releases/tag/ex-vivo_example-data). 
+Please prepare the inputs in the format described in the reconstruction tutorial.
 
 The L-curve example estimates the QSM and μQSM **L2** parameters. Review the
 estimated values and transfer them manually into the reconstruction settings.
@@ -106,7 +106,7 @@ TV reconstruction is also available.
 
 The examples resolve default paths relative to their own files, so they can run
 from another working directory after the package is installed. The ex vivo
-L-curve example enables GPU by default; use `--no-use-gpu` to run it on the CPU.
+L-curve example enables GPU by default (--use-gpu) and also can use `--no-use-gpu` to run it on the CPU.
 
 ## Citation
 
