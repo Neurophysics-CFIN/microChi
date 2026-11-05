@@ -189,7 +189,7 @@ python Micro_QSM_Recon.py --input-dir "C:\path\to\matlab_inputs" --output-dir "C
 ```
 
 Only the selected reconstructions are calculated and exported. Use a new output
-folder when changing methods; files from an earlier run are not deleted.
+folder when changing methods.
 
 `--no-display` saves figures without opening their windows. To skip the figures
 entirely, use `--no-plots`. For the MATLAB workflow, append
@@ -234,8 +234,8 @@ field = phase / (gammaB0 * mean(diff(TEs)) * 1e-3)
 local_field = mask_phase * (field - mean(field[mask_phase]))
 ```
 
-The mesoscopic term is `-0.5 * (bᵀ S b - 1/3)`, restricted by the phase and
-white-matter masks, where `S` is the FBI scatter matrix and `b` is the normalized
+The mesoscopic term is `-0.5 * (bᵀ T b - 1/3)`, restricted by the phase and
+white-matter masks, where `T` is the FBI scatter matrix and `b` is the normalized
 `B0_dir` in the same array-axis frame as the b-vectors. The original x-axis
 calculation is retained for the supplied data. The arbitrary-direction
 projection has synthetic rotation tests; validate coordinate conventions for
