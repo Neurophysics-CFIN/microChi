@@ -221,7 +221,7 @@ projection has synthetic rotation tests; validate coordinate conventions for
 each dataset.
 
 Outputs are cropped to the input dimensions and CSF-referenced as
-`-(chi - mean(chi[mask_csf]))`, in ppm. The script saves
+`(chi - mean(chi[mask_csf]))`, in ppm. The script saves
 `exvivo_reconstruction.npz` and `exvivo_reconstruction.mat` containing:
 
 | Key | Map |
