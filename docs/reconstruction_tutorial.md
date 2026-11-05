@@ -39,14 +39,14 @@ python Micro_QSM_Recon.py --help
 
 In VS Code, open this project folder and choose the Python interpreter from the
 `mesochi` Conda environment using **Python: Select Interpreter**. For the
-Interactive window or a notebook, select the same environment as its kernel;
-restart an existing kernel after changing environments. Running a script from
+Interactive window or a notebook, select the same environment as its kernel.
+Restart an existing kernel after changing environments. Running a script from
 the project directory alone does not install the `src/` package.
 
 ### Optional NVIDIA GPU
 
 The environment works on CPU without CuPy. The public script selects a CUDA
-GPU if compatible CuPy and a usable device are available; otherwise it reports
+GPU if compatible CuPy and a usable device are available. Otherwise, it reports
 CPU selection. `--use-gpu` explicitly requires a GPU, while `--no-use-gpu`
 forces CPU. FBI preparation and input/output work remain on CPU.
 
@@ -106,7 +106,7 @@ use exactly one of `.nii` or `.nii.gz`:
 
 Images must use millimetre units, valid spatial transforms, orthogonal voxel
 axes, matching spatial shapes, and matching affines. They must also be correctly
-registered; matching headers alone cannot prove registration. No image flips,
+registered. Matching headers alone cannot prove registration. No image flips,
 resampling, or registration are performed. The phase image supplies spatial
 geometry for NIfTI output unless a matching reference is explicitly supplied.
 
@@ -121,10 +121,10 @@ Example `meta_info.json`:
 }
 ```
 
-These values illustrate the format; use values appropriate for your acquisition.
+These values illustrate the format. Use values appropriate for your acquisition.
 `B0_dir` must be in image-array axes, `gammaB0` is in rad/s per ppm, and `TEs`
 is in milliseconds. Array-axis b-vectors use `"image_axes"`. For standard
-FSL/BIDS b-vectors use `"fsl"`; the toolbox converts them to array axes using
+FSL/BIDS b-vectors use `"fsl"`. The toolbox converts them to array axes using
 the NIfTI affine handedness. The files must correspond to the final registered
 image grid. If preprocessing changed the image axes, ensure the b-vectors were
 appropriately transformed. See [FSL's b-vector convention](https://fsl.fmrib.ox.ac.uk/fsl/docs/diffusion/faq.html).
@@ -133,13 +133,13 @@ appropriately transformed. See [FSL's b-vector convention](https://fsl.fmrib.ox.
 
 | Setting | Default | Meaning |
 | --- | --- | --- |
-| `regularization` / `--regularization` | `both` | Run `l2`, `tv`, or `both`; values are case-insensitive |
+| `regularization` / `--regularization` | `both` | Run `l2`, `tv`, or `both`. Values are case-insensitive. |
 | `weight_file` / `--weight-file` | `None` | Optional `.npy` or `.mat` containing `weight`, spatial shape `(X,Y,Z)`, finite and nonnegative |
-| `nifti_reference` / `--nifti-reference` | `None` | Matching 3D NIfTI geometry for export; phase image is used for NIfTI inputs |
-| `use_gpu` / `--use-gpu` | Automatic in public script | Use GPU if CUDA and CuPy are available; `--no-use-gpu` forces CPU |
-| `b_fbi` / `--b-fbi` | First b-value | FBI shell; if first b-value is zero, the only positive shell is selected, or an explicit shell is required when several exist |
+| `nifti_reference` / `--nifti-reference` | `None` | Matching 3D NIfTI geometry for export. NIfTI inputs use the phase image as the reference. |
+| `use_gpu` / `--use-gpu` | Automatic in public script | Use GPU if CUDA and CuPy are available. `--no-use-gpu` forces CPU. |
+| `b_fbi` / `--b-fbi` | First b-value | FBI shell. When the first b-value is zero, the toolbox selects the only positive shell or requires an explicit choice if several positive shells are present. |
 | `l_max` / `--l-max` | `6` | Even SH degree, at least 2 |
-| `fbi_method` / `--fbi-method` | `corrected` | `corrected` requires `D0`; `exact` requires `Da` |
+| `fbi_method` / `--fbi-method` | `corrected` | `corrected` requires `D0`. `exact` requires `Da`. |
 | `D0` / `--D0` | `2e-3` mm²/s | Corrected-method diffusivity |
 | `Da` / `--Da` | `None` | Exact-method diffusivity |
 | `qsm_l2_lambda`, `muqsm_l2_lambda` | `8e-3` each | Independent L2 parameters |
@@ -154,7 +154,7 @@ weights changes the data-term scale and can change appropriate regularization.
 A MATLAB weight file must contain a variable named `weight`.
 
 Use `python Micro_QSM_Recon.py --help` for argument names, export formats,
-progress, and plotting controls. Python workflow calls default to CPU; pass
+progress, and plotting controls. Python workflow calls default to CPU. Pass
 `use_gpu=True` explicitly to use GPU.
 
 ## 3. Run reconstruction
@@ -193,13 +193,13 @@ folder when changing methods.
 
 `--no-display` saves figures without opening their windows. To skip the figures
 entirely, use `--no-plots`. For the MATLAB workflow, append
-`--nifti-reference "C:\path\to\reference.nii.gz"` if you want NIfTI maps;
-the reference must describe the same registered voxel grid and array ordering.
+`--nifti-reference "C:\path\to\reference.nii.gz"` if you want NIfTI maps.
+The reference must describe the same registered voxel grid and array ordering.
 Without it, NumPy and MATLAB outputs are still saved. For either input format,
 append `--weight-file "C:\path\to\weight.mat"` if you have a weight map.
 Both arguments are optional.
 
-The four regularization values can be set independently; only the values for
+The four regularization values can be set independently. Only the values for
 the selected methods are used. For example:
 
 ```powershell
@@ -238,7 +238,7 @@ The mesoscopic term is `-0.5 * (bᵀ T b - 1/3)`, restricted by the phase and
 white-matter masks, where `T` is the FBI scatter matrix and `b` is the normalized
 `B0_dir` in the same array-axis frame as the b-vectors. The original x-axis
 calculation is retained for the supplied data. The arbitrary-direction
-projection has synthetic rotation tests; validate coordinate conventions for
+projection has synthetic rotation tests. Validate coordinate conventions for
 each dataset.
 
 Outputs are cropped to the input dimensions and CSF-referenced as
@@ -260,10 +260,10 @@ four for `both`. The map variable names and corresponding NIfTI filenames are:
 
 NIfTI files are exported only for the selected maps when NIfTI output is
 requested and a matching reference is available. NIfTI inputs supply the phase
-image as the reference automatically; MATLAB inputs require
+image as the reference automatically. MATLAB inputs require
 `--nifti-reference`. Array ordering and validated spatial geometry are preserved
 without resampling. Without a reference, NIfTI export is skipped when MAT or NPZ
-output is also selected; NIfTI-only output requires a matching reference.
+output is also selected. NIfTI-only output requires a matching reference.
 Use `--output-formats` to choose the map export formats, for example
 `--output-formats npz mat`, or edit `OUTPUT_FORMATS` in the script.
 
@@ -276,12 +276,12 @@ The other default output files are:
 | `exvivo_run.json` | Inputs, selected regularization, parameters, iterations, and saved file paths |
 
 `--no-display` saves the PNG figures without opening windows. `--no-plots`
-skips both figure files; map exports and the JSON run record are still saved.
+skips both figure files. Map exports and the JSON run record are still saved.
 
 ## 5. Ex vivo L-curve example
 
 Run the following after placing the supplied MATLAB data in `data/exvivo/`.
-The example defaults to GPU; `--no-use-gpu` uses the portable CPU environment:
+The example defaults to GPU. Use `--no-use-gpu` to run it on the CPU:
 
 ```powershell
 python examples/exvivo_lcurve.py --no-use-gpu --no-display
@@ -294,10 +294,9 @@ raw padded residual norms `||Ax-y||₂`, solution norms `||x||₂`, iteration
 counts, plots, selections, and selected maps. Each solve starts from zero.
 
 Inspect the plots and flags, then manually transfer accepted L2 estimates to
-`Micro_QSM_Recon.py`. A boundary or nonmonotonic curve needs closer inspection;
-an unresolved curve is reported without substituting a fixed value. L-curve
+`Micro_QSM_Recon.py`. A boundary or nonmonotonic curve needs closer inspection.
+An unresolved curve is reported without substituting a fixed value. L-curve
 selection does not estimate TV parameters or automatically change reconstruction
 settings. The supplied full-size sweep can take substantial time.
 Use a new output directory if an older four-curve run exists: existing files are
 not cleared, so old TV plots and archives can remain alongside the new results.
-
