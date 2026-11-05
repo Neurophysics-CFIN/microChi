@@ -133,6 +133,7 @@ appropriately transformed. See [FSL's b-vector convention](https://fsl.fmrib.ox.
 
 | Setting | Default | Meaning |
 | --- | --- | --- |
+| `regularization` / `--regularization` | `both` | Run `l2`, `tv`, or `both`; values are case-insensitive |
 | `weight_file` / `--weight-file` | `None` | Optional `.npy` or `.mat` containing `weight`, spatial shape `(X,Y,Z)`, finite and nonnegative |
 | `nifti_reference` / `--nifti-reference` | `None` | Matching 3D NIfTI geometry for export; phase image is used for NIfTI inputs |
 | `use_gpu` / `--use-gpu` | Automatic in public script | Use GPU if CUDA and CuPy are available; `--no-use-gpu` forces CPU |
@@ -172,6 +173,24 @@ For NIfTI inputs:
 python Micro_QSM_Recon.py --input-dir "C:\path\to\nifti_inputs" --output-dir "C:\path\to\output" --input-format nifti --no-display
 ```
 
+Select the regularization method with `--regularization`:
+
+| Option | Reconstructions |
+| --- | --- |
+| `l2` | QSM L2 and μQSM L2 only |
+| `tv` | QSM TV and μQSM TV only |
+| `both` (default) | All four maps |
+
+For example, to run each method separately:
+
+```powershell
+python Micro_QSM_Recon.py --input-dir "C:\path\to\matlab_inputs" --output-dir "C:\path\to\output_l2" --regularization l2 --no-display
+python Micro_QSM_Recon.py --input-dir "C:\path\to\matlab_inputs" --output-dir "C:\path\to\output_tv" --regularization tv --no-display
+```
+
+Only the selected reconstructions are calculated and exported. Use a new output
+folder when changing methods; files from an earlier run are not deleted.
+
 `--no-display` saves figures without opening their windows. To skip the figures
 entirely, use `--no-plots`. For the MATLAB workflow, append
 `--nifti-reference "C:\path\to\reference.nii.gz"` if you want NIfTI maps;
@@ -180,7 +199,8 @@ Without it, NumPy and MATLAB outputs are still saved. For either input format,
 append `--weight-file "C:\path\to\weight.mat"` if you have a weight map.
 Both arguments are optional.
 
-The four regularization values can be set independently, for example:
+The four regularization values can be set independently; only the values for
+the selected methods are used. For example:
 
 ```powershell
 python Micro_QSM_Recon.py --input-dir "C:\path\to\matlab_inputs" --output-dir "C:\path\to\output" --input-format mat --muqsm-l2-lambda 0.008 --qsm-l2-lambda 0.008 --muqsm-tv-lambda 1e-5 --qsm-tv-lambda 1e-5 --no-display
@@ -190,8 +210,9 @@ These values are the existing defaults, not values estimated for your dataset.
 The separate L-curve example below can help estimate the two L2 values. The
 public script does not load those estimates automatically.
 
-To run from VS Code instead, edit `INPUT_DIR`, `OUTPUT_DIR`, and `INPUT_FORMAT`
-near the top of `Micro_QSM_Recon.py`, select the `mesochi` interpreter, then
+To run from VS Code instead, edit `INPUT_DIR`, `OUTPUT_DIR`, `INPUT_FORMAT`, and
+`REGULARIZATION` near the top of `Micro_QSM_Recon.py`. Set `REGULARIZATION` to
+`'l2'`, `'tv'`, or `'both'`, select the `mesochi` interpreter, then
 use **Run Python File in Terminal**. Command-line arguments override the
 editable settings. Paths passed on the command line are relative to the
 terminal's current directory unless absolute.
@@ -221,23 +242,41 @@ projection has synthetic rotation tests; validate coordinate conventions for
 each dataset.
 
 Outputs are cropped to the input dimensions and CSF-referenced as
-`(chi - mean(chi[mask_csf]))`, in ppm. The script saves
-`exvivo_reconstruction.npz` and `exvivo_reconstruction.mat` containing:
+`-(chi - mean(chi[mask_csf]))`, in ppm. Files are written to `--output-dir`.
+With the default export settings, the reconstructed maps are saved in:
 
-| Key | Map |
+- `exvivo_reconstruction.mat` — a MATLAB file.
+- `exvivo_reconstruction.npz` — a compressed NumPy archive for Python.
+
+Both files contain the same selected maps: two maps for `l2` or `tv`, or all
+four for `both`. The map variable names and corresponding NIfTI filenames are:
+
+| Map variable in MAT/NPZ | Reconstruction | NIfTI filename |
+| --- | --- | --- |
+| `Chi_QSM_L2` | Standard QSM with L2 regularization | `Chi_QSM_L2.nii.gz` |
+| `Chi_muQSM_L2` | μQSM with L2 regularization | `Chi_muQSM_L2.nii.gz` |
+| `Chi_QSM_TV` | Standard QSM with TV regularization | `Chi_QSM_TV.nii.gz` |
+| `Chi_muQSM_TV` | μQSM with TV regularization | `Chi_muQSM_TV.nii.gz` |
+
+NIfTI files are exported only for the selected maps when NIfTI output is
+requested and a matching reference is available. NIfTI inputs supply the phase
+image as the reference automatically; MATLAB inputs require
+`--nifti-reference`. Array ordering and validated spatial geometry are preserved
+without resampling. Without a reference, NIfTI export is skipped when MAT or NPZ
+output is also selected; NIfTI-only output requires a matching reference.
+Use `--output-formats` to choose the map export formats, for example
+`--output-formats npz mat`, or edit `OUTPUT_FORMATS` in the script.
+
+The other default output files are:
+
+| File | Content |
 | --- | --- |
-| `chi_qsm_ref` | Standard QSM with L2 regularization |
-| `chi_muqsm_ref` | μQSM with L2 regularization |
-| `chi_qsm_tv_ref` | Standard QSM with TV regularization |
-| `chi_muqsm_tv_ref` | μQSM with TV regularization |
+| `exvivo_slices.png` | Orthogonal slices of μQSM L2 when available, otherwise μQSM TV |
+| `exvivo_comparison.png` | QSM/μQSM maps and their differences for the selected methods |
+| `exvivo_run.json` | Inputs, selected regularization, parameters, iterations, and saved file paths |
 
-Compare the QSM and μQSM maps and their L2/TV variants for your data and
-chosen regularization. When a matching reference is available, the script also
-saves one `.nii.gz` per key.
-It preserves array ordering and copies validated spatial geometry without
-resampling. Without a reference, NIfTI export is explicitly skipped.
-`exvivo_run.json` records inputs, parameters, iterations, and saved files.
-The default plots are `exvivo_slices.png` and `exvivo_comparison.png`.
+`--no-display` saves the PNG figures without opening windows. `--no-plots`
+skips both figure files; map exports and the JSON run record are still saved.
 
 ## 5. Ex vivo L-curve example
 
